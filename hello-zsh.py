@@ -21,6 +21,7 @@ from rich.align import Align
 from rich.table import Table
 from rich_gradient import Gradient
 from rich.style import Style
+from rich.box import ROUNDED, Box
 import pyfiglet
 
 # Load configuration
@@ -67,6 +68,20 @@ CONFIG = load_config()
 ACTIVE_THEME = CONFIG.get('theme', 'tokyo-night')
 THEME = CONFIG['themes'][ACTIVE_THEME]
 ASCII_FONTS = CONFIG.get('ascii_fonts', ['poison', 'larry3d', 'graffiti'])
+
+# Create a box style with no borders
+NO_BORDER = Box(
+    """\
+    
+    
+    
+    
+    
+    
+    
+    
+"""
+)
 
 # Cache settings
 CACHE_DIR = Path.home() / '.cache' / 'welcome-banner'
@@ -329,8 +344,9 @@ def main():
     # Get terminal width for responsive layout
     terminal_width = term_cols
     
-    # Clear screen
-    console.clear()
+    # Clear screen (skip in VSCode terminal for compatibility)
+    if os.environ.get('TERM_PROGRAM') != 'vscode':
+        console.clear()
     
     # Get all data in parallel for speed
     with ThreadPoolExecutor(max_workers=4) as executor:
@@ -430,20 +446,20 @@ def main():
             
             # Map weather icons to colored descriptions
             weather_descriptions = {
-                '☀️': f"[{THEME[weather_colors.get('sunny', 'yellow')]}]clear and sunny[/]",
-                '🌤️': f"[{THEME[weather_colors.get('sunny', 'yellow')]}]mostly sunny[/]",
-                '⛅️': f"[{THEME[weather_colors.get('windy', 'white')]}]partly cloudy[/]", 
-                '☁️': f"[{THEME[weather_colors.get('cloudy', 'dim')]}]cloudy[/]",
-                '🌫️': f"[{THEME[weather_colors.get('cloudy', 'dim')]}]foggy[/]",
-                '🌧️': f"[{THEME[weather_colors.get('rainy', 'blue')]}]rainy[/]",
-                '⛈️': f"[{THEME[weather_colors.get('stormy', 'purple')]}]stormy with thunderstorms[/]",
-                '🌩️': f"[{THEME[weather_colors.get('stormy', 'purple')]}]thunderstorms[/]",
-                '🌨️': f"[{THEME[weather_colors.get('snowy', 'light_cyan')]}]snowy[/]",
-                '❄️': f"[{THEME[weather_colors.get('snowy', 'light_cyan')]}]snowing[/]",
-                '🌦️': f"[{THEME[weather_colors.get('sunny', 'yellow')]}]sunny[/] [{THEME['foreground']}]with some[/] [{THEME[weather_colors.get('rainy', 'blue')]}]rain[/]",
-                '🌥️': f"[{THEME[weather_colors.get('cloudy', 'dim')]}]mostly cloudy[/]",
-                '🌪️': f"[{THEME[weather_colors.get('danger', 'red')]}]tornado warning[/]",
-                '🌬️': f"[{THEME[weather_colors.get('windy', 'white')]}]windy[/]"
+                '☀️': f"[{THEME.get(weather_colors.get('sunny', 'yellow'), THEME['yellow'])}]clear and sunny[/]",
+                '🌤️': f"[{THEME.get(weather_colors.get('sunny', 'yellow'), THEME['yellow'])}]mostly sunny[/]",
+                '⛅️': f"[{THEME.get(weather_colors.get('windy', 'white'), THEME['white'])}]partly cloudy[/]", 
+                '☁️': f"[{THEME.get(weather_colors.get('cloudy', 'dim'), THEME['dim'])}]cloudy[/]",
+                '🌫️': f"[{THEME.get(weather_colors.get('cloudy', 'dim'), THEME['dim'])}]foggy[/]",
+                '🌧️': f"[{THEME.get(weather_colors.get('rainy', 'blue'), THEME['blue'])}]rainy[/]",
+                '⛈️': f"[{THEME.get(weather_colors.get('stormy', 'purple'), THEME['purple'])}]stormy with thunderstorms[/]",
+                '🌩️': f"[{THEME.get(weather_colors.get('stormy', 'purple'), THEME['purple'])}]thunderstorms[/]",
+                '🌨️': f"[{THEME.get(weather_colors.get('snowy', 'light_cyan'), THEME.get('light_cyan', THEME['cyan']))}]snowy[/]",
+                '❄️': f"[{THEME.get(weather_colors.get('snowy', 'light_cyan'), THEME.get('light_cyan', THEME['cyan']))}]snowing[/]",
+                '🌦️': f"[{THEME.get(weather_colors.get('sunny', 'yellow'), THEME['yellow'])}]sunny[/] [{THEME['foreground']}]with some[/] [{THEME.get(weather_colors.get('rainy', 'blue'), THEME['blue'])}]rain[/]",
+                '🌥️': f"[{THEME.get(weather_colors.get('cloudy', 'dim'), THEME['dim'])}]mostly cloudy[/]",
+                '🌪️': f"[{THEME.get(weather_colors.get('danger', 'red'), THEME['red'])}]tornado warning[/]",
+                '🌬️': f"[{THEME.get(weather_colors.get('windy', 'white'), THEME['white'])}]windy[/]"
             }
             
             # Get description or default to showing the icon
@@ -475,12 +491,13 @@ def main():
     # Center the quote
     centered_quote = Align(quote_text, align="center")
     
-    # Add horizontal padding to greeting text (original padding)
-    greeting_lines = greeting_text.split('\n')
-    padded_lines = [f"  {line}  " for line in greeting_lines]
-    padded_greeting = '\n'.join(padded_lines)
-    # Center align the greeting text
-    centered_greeting = Align(padded_greeting, align="center", vertical="middle")
+    # Create greeting panel with no borders
+    greeting_panel = Panel(
+        Align(greeting_text, align="center"),
+        box=NO_BORDER,  # Use custom no-border box
+        padding=(1, 4),  # Same padding as system panel
+        expand=False
+    )
     
     # Create system panel with centered content
     centered_system_content = Align(system_content, align="center")
@@ -496,7 +513,7 @@ def main():
     # Create layout based on terminal width
     if terminal_width < 80:
         # For narrow terminals, stack vertically
-        console.print(centered_greeting)
+        console.print(greeting_panel, justify="center")
         console.print()
         console.print(system_panel, justify="center")
     else:
@@ -506,8 +523,9 @@ def main():
         grid.add_column(ratio=2)  # Left column
         grid.add_column(ratio=1)  # Right column
         
-        # Add row with centered greeting and system panel
-        grid.add_row(centered_greeting, system_panel)
+        # Add row with greeting panel and system panel
+        # Center the greeting panel in its column
+        grid.add_row(Align(greeting_panel, align="center"), system_panel)
         
         console.print(grid)
     

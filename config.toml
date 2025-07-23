@@ -9,6 +9,7 @@ theme = "tokyo-night"
 # red_phoenix, tubular, the_edge, univers
 ascii_fonts = [
     "slant",
+    "alligator2",
     "graffiti",
     "bloody",
     "larry3d"
