@@ -1,0 +1,78 @@
+# Welcome Banner Configuration
+
+# Active theme - options: "tokyo-night", "tokyo-night-storm"
+theme = "tokyo-night"
+
+# ASCII Art Fonts - will rotate randomly through these
+# Available fonts: poison, larry3d, graffiti, nancyj-fancy, modular, sub-zero, 
+# starwars, bloody, blocky, bubble__, colossal, dos_rebel, gradient, georgia11, 
+# red_phoenix, tubular, the_edge, univers
+ascii_fonts = [
+    "slant",
+    "graffiti",
+    "bloody",
+    "larry3d"
+]
+
+# Theme Definitions
+[themes.tokyo-night]
+name = "Tokyo Night"
+# Core colors
+red = "#f7768e"          # Keywords, HTML elements, Terminal Red
+orange = "#ff9e64"       # Numbers, Booleans
+yellow = "#e0af68"       # Function params, Terminal Yellow
+light_yellow = "#cfc9c2" # Parameters inside functions
+green = "#9ece6a"        # Strings, CSS classes
+teal = "#73daca"         # Object keys, Markdown links, Terminal Green
+light_teal = "#b4f9f8"   # Regex literal strings
+cyan = "#2ac3de"         # Language support functions
+light_cyan = "#7dcfff"   # Object props, Terminal Cyan
+blue = "#7aa2f7"         # Function names, Terminal Blue
+purple = "#bb9af7"       # Keywords, Terminal Magenta
+white = "#c0caf5"        # Variables, Terminal White
+foreground = "#a9b1d6"   # Editor Foreground
+text = "#9aa5ce"         # Markdown/HTML Text
+dim = "#565f89"          # Comments
+black = "#414868"        # Terminal Black
+background = "#1a1b26"   # Editor Background
+
+# Weather color mappings
+[themes.tokyo-night.weather]
+sunny = "yellow"
+cloudy = "dim"
+rainy = "blue"
+stormy = "purple"
+snowy = "light_cyan"
+windy = "white"
+danger = "red"
+
+[themes.tokyo-night-storm]
+name = "Tokyo Night Storm"
+# Same colors but with Storm background
+red = "#f7768e"
+orange = "#ff9e64"
+yellow = "#e0af68"
+light_yellow = "#cfc9c2"
+green = "#9ece6a"
+teal = "#73daca"
+light_teal = "#b4f9f8"
+cyan = "#2ac3de"
+light_cyan = "#7dcfff"
+blue = "#7aa2f7"
+purple = "#bb9af7"
+white = "#c0caf5"
+foreground = "#a9b1d6"
+text = "#9aa5ce"
+dim = "#565f89"
+black = "#414868"
+background = "#24283b"   # Storm variant background
+
+# Weather color mappings
+[themes.tokyo-night-storm.weather]
+sunny = "yellow"
+cloudy = "dim"
+rainy = "blue"
+stormy = "purple"
+snowy = "light_cyan"
+windy = "white"
+danger = "red"
