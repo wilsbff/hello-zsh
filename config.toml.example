@@ -1,4 +1,9 @@
-# Welcome Banner Configuration
+# Hello-zsh Configuration
+
+# User Settings
+user_name = "friend"  # Your name for the greeting
+show_weather = true  # Set to false to disable weather API calls
+show_quote = true    # Set to false to disable programming quotes
 
 # Active theme - options: "tokyo-night", "tokyo-night-storm"
 theme = "tokyo-night"
@@ -12,7 +17,19 @@ ascii_fonts = [
     "alligator2",
     "graffiti",
     "bloody",
-    "larry3d"
+    "larry3d",
+    "ansi_shadow",
+    "basic",
+    "chunky",
+    "colossal",
+    "nancyj-improved",
+    "shadow",
+    "smisome1",
+    "speed",
+    "varsity",
+    "wet_letter",
+    "xhelvb",
+    "modular"
 ]
 
 # Theme Definitions

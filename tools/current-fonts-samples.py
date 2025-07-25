@@ -6,10 +6,10 @@ Generate samples for the fonts currently used in welcome-banner.py
 
 from pyfiglet import Figlet
 
-# Fonts from welcome-banner.py line 80
-current_fonts = ['poison', 'larry3d', 'graffiti', 'nancyj-fancy', 'modular', 'sub-zero', 'starwars', 'bloody', 'blocky', 'bubble__', 'colossal', 'dos_rebel', 'gradient', 'georgia11', 'red_phoenix', 'tubular', 'the_edge', 'univers']
+# Fonts from config.toml
+current_fonts = ['slant', 'alligator2', 'graffiti', 'bloody', 'larry3d']
 
-def generate_current_font_samples(text="Wils"):
+def generate_current_font_samples(text="Good Afternoon"):
     """Generate samples for currently used fonts only"""
     print(f"🎨 Generating samples for {len(current_fonts)} currently used fonts...")
     

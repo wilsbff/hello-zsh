@@ -5,6 +5,8 @@ A beautiful terminal welcome banner for ZSH with Tokyo Night theme support, ASCI
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
+![Hello ZSH Screenshot](screenshot.jpg)
+
 ## Features
 
 - 🎨 **Customizable ASCII Art Headers** - Multiple font options with gradient support
@@ -16,43 +18,57 @@ A beautiful terminal welcome banner for ZSH with Tokyo Night theme support, ASCI
 
 ## Installation
 
-### Prerequisites
+### Method 1: Using Zinit (Recommended)
 
 ```bash
-# Required Python packages
-pip install rich pyfiglet requests psutil
+# Install with Zinit
+zinit light YOUR_USERNAME/hello-zsh
+
+# Dependencies still need to be installed manually:
+pip3 install --user rich rich-gradient pyfiglet requests psutil
 ```
 
-### Quick Install
-
-1. Clone the repository:
+To disable auto-run on startup:
 ```bash
-git clone https://github.com/yourusername/hello-zsh.git
-mkdir -p ~/.config/hello-zsh
-cp hello-zsh/* ~/.config/hello-zsh/
+# Add before zinit light command
+export HELLO_ZSH_AUTO=false
 ```
 
-2. Add to your `.zshrc`:
+### Method 2: Using install.sh
+
+1. Clone and install:
 ```bash
-# Tokyo Night Welcome Banner
-if [[ $- == *i* ]] && [[ -f ~/.config/hello-zsh/hello-zsh.py ]]; then
-    python3 -O ~/.config/hello-zsh/hello-zsh.py
-fi
+git clone https://github.com/YOUR_USERNAME/hello-zsh.git
+cd hello-zsh
+./install.sh
+```
+
+2. Follow the prompts to set your name and install dependencies.
+
+3. Add to your `.zshrc`:
+```bash
+# Hello-zsh welcome banner
+hello-zsh
 ```
 
 ## Configuration
 
-Edit `config.toml` to customize your banner:
+Configuration file is located at `~/.config/hello-zsh/config.toml`:
 
 ```toml
+# User settings
+user_name = "Wils"      # Your name for the greeting
+show_weather = true     # Enable/disable weather
+show_quote = true       # Enable/disable quotes
+
 # Theme selection
-theme = "tokyo-night"  # or "tokyo-storm"
+theme = "tokyo-night"   # or "tokyo-night-storm"
 
 # ASCII fonts (randomly selected)
-ascii_fonts = ["slant", "graffiti", "bloody", "doom", "larry3d"]
-
-# Custom greeting (optional)
-# greeting = "Welcome back, hacker!"
+ascii_fonts = [
+    "slant", "graffiti", "bloody", "larry3d",
+    "colossal", "shadow", "chunky"
+]
 ```
 
 ### Available Themes

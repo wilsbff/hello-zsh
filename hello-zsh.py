@@ -9,6 +9,9 @@ import datetime
 import json
 import time
 import tomllib
+import platform
+import socket
+import psutil
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
@@ -26,8 +29,9 @@ import pyfiglet
 
 # Load configuration
 def load_config():
-    """Load configuration from config.toml"""
-    config_path = Path(__file__).parent / 'config.toml'
+    """Load configuration from ~/.config/hello-zsh/config.toml"""
+    # Use XDG config directory
+    config_path = Path.home() / '.config' / 'hello-zsh' / 'config.toml'
     
     # Default config if file doesn't exist
     default_config = {
@@ -86,13 +90,13 @@ NO_BORDER = Box(
 # Cache settings
 CACHE_DIR = Path.home() / '.cache' / 'welcome-banner'
 WEATHER_CACHE_FILE = CACHE_DIR / 'weather.json'
-CACHE_DURATION = 300  # 5 minutes
+CACHE_DURATION = 1800  # 30 minutes
 
 def ensure_cache_dir():
     """Create cache directory if it doesn't exist"""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-def get_greeting():
+def get_greeting(terminal_width=None):
     """Get time-based greeting with ASCII art and gradient colors"""
     hour = datetime.datetime.now().hour
     
@@ -113,9 +117,10 @@ def get_greeting():
         short_greeting = "EVENING"
         colors = [THEME['purple'], THEME['blue'], THEME['dim']]
     
-    # Get terminal width for responsive greeting text
-    import shutil
-    terminal_width, _ = shutil.get_terminal_size()
+    # Use provided width or get it if not provided
+    if terminal_width is None:
+        import shutil
+        terminal_width, _ = shutil.get_terminal_size()
     
     # Rotate between fonts randomly from config
     import random
@@ -161,35 +166,59 @@ def get_system_info():
     info = []
     
     # OS info - more compact
-    os_info = run_command("uname -s")
-    kernel = run_command("uname -r | cut -d'-' -f1")
+    os_info = platform.system()
+    kernel = platform.release().split('-')[0]
     if os_info and kernel:
         info.append(f"[{THEME['dim']}]OS:[/] {os_info} {kernel}")
     
     # Hostname
-    hostname = run_command("hostname")
+    hostname = socket.gethostname()
     if hostname:
         info.append(f"[{THEME['dim']}]Host:[/] {hostname}")
     
     # Shell
     shell = os.environ.get('SHELL', 'unknown').split('/')[-1]
+    # Keep zsh version check as subprocess since it's shell-specific
     zsh_version = run_command("zsh --version | awk '{print $2}'")
     if zsh_version:
         info.append(f"[{THEME['dim']}]Shell:[/] {shell} {zsh_version}")
     else:
         info.append(f"[{THEME['dim']}]Shell:[/] {shell}")
     
-    # Memory - more compact
-    mem_info = run_command("free -h | awk '/^Mem:/ {print $3 \"/\" $2}'")
-    if mem_info:
-        info.append(f"[{THEME['dim']}]Mem:[/] {mem_info}")
+    # Memory - more compact using psutil
+    mem = psutil.virtual_memory()
+    mem_used_gb = mem.used / (1024**3)
+    mem_total_gb = mem.total / (1024**3)
+    # Format to match original output style
+    if mem_used_gb < 1:
+        mem_used_str = f"{int(mem_used_gb * 1024)}Mi"
+    else:
+        mem_used_str = f"{mem_used_gb:.1f}Gi"
+    if mem_total_gb < 1:
+        mem_total_str = f"{int(mem_total_gb * 1024)}Mi"
+    else:
+        mem_total_str = f"{mem_total_gb:.1f}Gi"
+    mem_info = f"{mem_used_str}/{mem_total_str}"
+    info.append(f"[{THEME['dim']}]Mem:[/] {mem_info}")
     
-    # Uptime - simplified
-    uptime = run_command("uptime -p | sed 's/up //' | sed 's/ hours/, /g' | sed 's/ minutes/ min/g'")
-    if uptime:
-        info.append(f"[{THEME['dim']}]Up:[/] {uptime}")
+    # Uptime - using psutil
+    boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+    uptime_delta = datetime.datetime.now() - boot_time
+    days = uptime_delta.days
+    hours = uptime_delta.seconds // 3600
+    minutes = (uptime_delta.seconds % 3600) // 60
     
-    # IP Address - just last octet if too long
+    uptime_parts = []
+    if days > 0:
+        uptime_parts.append(f"{days} days" if days > 1 else "1 day")
+    if hours > 0:
+        uptime_parts.append(f"{hours}h")
+    if minutes > 0 and days == 0:  # Only show minutes if less than a day
+        uptime_parts.append(f"{minutes}m")
+    uptime = " ".join(uptime_parts) if uptime_parts else "just started"
+    info.append(f"[{THEME['dim']}]Up:[/] {uptime}")
+    
+    # IP Address - keep subprocess for now as it's complex networking
     ip = run_command("ip route get 1 2>/dev/null | awk '{print $7;exit}' || hostname -I 2>/dev/null | awk '{print $1}'")
     if ip and len(ip) > 12:
         # Show first 3 octets + last
@@ -203,22 +232,33 @@ def get_system_info():
 
 def get_git_info():
     """Get git repository information"""
-    # Check if we're in a git repo
-    if not run_command("git rev-parse --git-dir"):
+    # Single git command to get all info at once
+    git_cmd = """git rev-parse --git-dir >/dev/null 2>&1 && echo "GITOK" && git branch --show-current && git status --porcelain | wc -l"""
+    git_output = run_command(git_cmd)
+    
+    if not git_output or "GITOK" not in git_output:
+        return None
+    
+    lines = git_output.strip().split('\n')
+    if len(lines) < 3:
         return None
     
     info = []
     
-    # Branch
-    branch = run_command("git branch --show-current")
+    # Branch (second line after GITOK)
+    branch = lines[1].strip()
     if branch:
         info.append(f"[{THEME['dim']}]Branch:[/] [{THEME['green']}]{branch}[/]")
     
-    # Status
-    status_count = run_command("git status --porcelain 2>/dev/null | wc -l")
-    if status_count and status_count != "0":
-        info.append(f"[{THEME['dim']}]Changes:[/] [{THEME['yellow']}]{status_count} files[/]")
-    else:
+    # Status count (third line)
+    try:
+        status_count = int(lines[2].strip())
+        if status_count > 0:
+            info.append(f"[{THEME['dim']}]Changes:[/] [{THEME['yellow']}]{status_count} files[/]")
+        else:
+            info.append(f"[{THEME['dim']}]Status:[/] [{THEME['green']}]Clean ✓[/]")
+    except ValueError:
+        # If we can't parse the count, assume clean
         info.append(f"[{THEME['dim']}]Status:[/] [{THEME['green']}]Clean ✓[/]")
     
     return "\n".join(info) if info else None
@@ -234,11 +274,11 @@ def get_weather_cached():
                 cache_data = json.load(f)
                 if time.time() - cache_data['timestamp'] < CACHE_DURATION:
                     return cache_data['weather']
-        except:
+        except Exception:
             pass
     
-    # Fetch new weather
-    weather = run_command("curl -s 'https://wttr.in?format=%c+%t+%p+%h'", timeout=0.8)
+    # Fetch new weather with 2 second timeout
+    weather = run_command("curl -s -m 2 'https://wttr.in?format=%c+%t+%p+%h'", timeout=2.0)
     
     if weather:
         # Cache the result
@@ -248,7 +288,7 @@ def get_weather_cached():
                     'timestamp': time.time(),
                     'weather': weather
                 }, f)
-        except:
+        except Exception:
             pass
     
     return weather
@@ -310,32 +350,15 @@ def get_random_quote():
 
 def main():
     """Main function to display the welcome banner"""
-    # Get actual terminal size - try multiple methods
+    # Get actual terminal size - optimized approach
     import shutil
     import os
     
-    # Try to get real terminal width
-    term_cols = None
-    
-    # Method 1: tput (most reliable)
+    # Try OS method first (fastest), then fall back to shutil
     try:
-        tput_width = run_command("tput cols")
-        if tput_width:
-            term_cols = int(tput_width)
-    except:
-        pass
-    
-    # Method 2: stty
-    if not term_cols:
-        try:
-            stty_size = run_command("stty size 2>/dev/null")
-            if stty_size:
-                _, term_cols = map(int, stty_size.split())
-        except:
-            pass
-    
-    # Method 3: shutil fallback
-    if not term_cols:
+        term_cols = os.get_terminal_size().columns
+    except (AttributeError, OSError):
+        # Fallback to shutil which handles more edge cases
         term_cols, _ = shutil.get_terminal_size()
     
     # Create console with explicit terminal width
@@ -352,17 +375,16 @@ def main():
     with ThreadPoolExecutor(max_workers=4) as executor:
         system_future = executor.submit(get_system_info)
         git_future = executor.submit(get_git_info)
-        weather_future = executor.submit(get_weather_cached)
+        weather_future = executor.submit(get_weather_cached) if CONFIG.get('show_weather', True) else executor.submit(lambda: None)
         date_future = executor.submit(get_date_info)
     
     # Create gradient banner that fills the width
-    banner = get_greeting()
+    banner = get_greeting(terminal_width)
     
     # Add top padding
     console.print("\n")
     
     # Print banner centered
-    from rich.align import Align
     centered_banner = Align(banner, align="center")
     console.print(centered_banner)
     
@@ -372,12 +394,14 @@ def main():
     # Get data
     system_info = system_future.result()
     git_info = git_future.result()
-    date_info = date_future.result()
+    # We don't use date_info directly, but we wait for it to complete
+    date_future.result()
     weather_data = weather_future.result()
     
     # Create natural language greeting with weather
     now = datetime.datetime.now()
-    greeting_text = f"[bold {THEME['cyan']}]Hi Wils![/] "
+    user_name = CONFIG.get('user_name', 'there')
+    greeting_text = f"[bold {THEME['cyan']}]Hi {user_name}![/] "
     
     # Add time-based greeting with randomization
     import random
@@ -433,7 +457,7 @@ def main():
     greeting_text += f"[{THEME['foreground']}]It's[/] [{THEME['blue']}]{now.strftime('%A, %B %d')}[/] [{THEME['foreground']}]at[/] [{THEME['blue']}]{now.strftime('%I:%M %p')}[/]. "
     
     # Add weather in natural language
-    if weather_data:
+    if weather_data and not weather_data.startswith("Unknown"):
         parts = weather_data.split()
         if len(parts) >= 4:
             icon = parts[0]
@@ -482,14 +506,17 @@ def main():
     if git_info:
         system_content += f"\n\n{git_info}"
     
-    # Quote
-    quote, author = get_random_quote()
-    quote_text = Text()
-    quote_text.append(f'"{quote}"', style=THEME["blue"])
-    quote_text.append(f'\n— {author}', style=THEME["dim"])
-    
-    # Center the quote
-    centered_quote = Align(quote_text, align="center")
+    # Quote (if enabled)
+    if CONFIG.get('show_quote', True):
+        quote, author = get_random_quote()
+        quote_text = Text()
+        quote_text.append(f'"{quote}"', style=THEME["blue"])
+        quote_text.append(f'\n— {author}', style=THEME["dim"])
+        
+        # Center the quote
+        centered_quote = Align(quote_text, align="center")
+    else:
+        centered_quote = None
     
     # Create greeting panel with no borders
     greeting_panel = Panel(
@@ -532,11 +559,9 @@ def main():
     # Add padding before quote
     console.print("\n")
     
-    # Print centered quote
-    console.print(centered_quote)
-    
-    # Add bottom padding
-    console.print("\n")
+    # Print centered quote (if enabled)
+    if centered_quote:
+        console.print(centered_quote)
 
 if __name__ == "__main__":
     main()
