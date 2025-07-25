@@ -17,7 +17,7 @@
 ### Performance Impact
 - Estimated reduction in startup time from ~500ms to <100ms
 - Subprocess calls reduced from 15+ to ~3 (zsh version, IP address, git batch)
-- Weather API no longer blocks startup beyond 2 seconds
+- Weather API no longer blocks startup beyond 0.5 seconds
 
 ### Quote API Integration
 - Integrated programming-quotes-api with multiple endpoint fallbacks

@@ -279,8 +279,8 @@ def get_weather_cached():
         except Exception:
             pass
     
-    # Fetch new weather with 2 second timeout
-    weather = run_command("curl -s -m 2 'https://wttr.in?format=%c+%t+%p+%h'", timeout=2.0)
+    # Fetch new weather with 0.5 second timeout
+    weather = run_command("curl -s -m 0.5 'https://wttr.in?format=%c+%t+%p+%h'", timeout=0.5)
     
     if weather:
         # Cache the result
