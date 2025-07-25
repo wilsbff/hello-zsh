@@ -90,7 +90,9 @@ NO_BORDER = Box(
 # Cache settings
 CACHE_DIR = Path.home() / '.cache' / 'welcome-banner'
 WEATHER_CACHE_FILE = CACHE_DIR / 'weather.json'
+QUOTE_CACHE_FILE = CACHE_DIR / 'quote.json'
 CACHE_DURATION = 1800  # 30 minutes
+QUOTE_CACHE_DURATION = 86400  # 24 hours
 
 def ensure_cache_dir():
     """Create cache directory if it doesn't exist"""
@@ -333,8 +335,11 @@ def get_date_info():
     return "\n".join(info)
 
 def get_random_quote():
-    """Get a random programming quote"""
-    quotes = [
+    """Get a random programming quote from API or fallback to cached/hardcoded"""
+    ensure_cache_dir()
+    
+    # Default quotes as fallback
+    fallback_quotes = [
         ("Talk is cheap. Show me the code.", "Linus Torvalds"),
         ("Premature optimization is the root of all evil.", "Donald Knuth"),
         ("Make it work, make it right, make it fast.", "Kent Beck"),
@@ -345,8 +350,68 @@ def get_random_quote():
         ("Code is like humor. When you have to explain it, it's bad.", "Cory House"),
     ]
     
+    # Check cache first
+    if QUOTE_CACHE_FILE.exists():
+        try:
+            with open(QUOTE_CACHE_FILE, 'r') as f:
+                cache_data = json.load(f)
+                if time.time() - cache_data['timestamp'] < QUOTE_CACHE_DURATION:
+                    return (cache_data['quote'], cache_data['author'])
+        except Exception:
+            pass
+    
+    # Try to fetch from API with very short timeout
+    # Multiple API endpoints to try in order
+    api_endpoints = [
+        "https://programming-quotes-api.herokuapp.com/quotes/random",
+        "https://api.quotable.io/random?tags=technology",
+        "https://programming-quotesapi.vercel.app/api/random"
+    ]
+    
+    api_quote = None
+    for endpoint in api_endpoints:
+        api_quote = run_command(f"curl -s -m 1 '{endpoint}'", timeout=1.0)
+        if api_quote and api_quote.strip() and not api_quote.startswith('<!'):
+            break
+    
+    if api_quote:
+        try:
+            # Parse JSON response - handle different API formats
+            quote_data = json.loads(api_quote)
+            
+            # Handle different response formats
+            if 'quote' in quote_data:
+                quote_text = quote_data.get('quote', '').strip()
+                author = quote_data.get('author', 'Unknown').strip()
+            elif 'content' in quote_data:  # quotable.io format
+                quote_text = quote_data.get('content', '').strip()
+                author = quote_data.get('author', 'Unknown').strip()
+            elif 'text' in quote_data:  # some APIs use 'text'
+                quote_text = quote_data.get('text', '').strip()
+                author = quote_data.get('author', 'Unknown').strip()
+            else:
+                quote_text = ''
+                author = 'Unknown'
+            
+            if quote_text:  # Valid quote received
+                # Cache the result
+                try:
+                    with open(QUOTE_CACHE_FILE, 'w') as f:
+                        json.dump({
+                            'timestamp': time.time(),
+                            'quote': quote_text,
+                            'author': author
+                        }, f)
+                except Exception:
+                    pass
+                
+                return (quote_text, author)
+        except json.JSONDecodeError:
+            pass
+    
+    # Fallback to random hardcoded quote
     import random
-    return random.choice(quotes)
+    return random.choice(fallback_quotes)
 
 def main():
     """Main function to display the welcome banner"""
